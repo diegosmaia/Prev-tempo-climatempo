@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 ##########################################################################
-# TempoAgora - Dados de Tempo cidades interessantes para Usina Santa Clara
+# TempoAgora - Script em Python para coletar dados do site climatempo.com.br com BeautifulSoup e enviar msg pelo telegram
 # Filename: tempoagora.py
 # Revision: 1.0
 # Date: 29/03/2016
