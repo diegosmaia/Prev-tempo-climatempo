@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 ##########################################################################
-# TempoAgora - Script em Python para coletar dados do site climatempo.com.br com BeautifulSoup e enviar msg pelo telegram
+# TempoAgora - Script em Python para coletar dados do site climatempo.com.br
+# com BeautifulSoup e enviar msg pelo telegram
 # Filename: tempoagora.py
 # Revision: 1.0
 # Date: 29/03/2016
@@ -20,11 +21,12 @@
 ##########################################################################
 # Install c/ pip do Python
 # pip install request
-# pip install beautifulsoup4 
-# pip install html2text #### nao é necessario
+# pip install beautifulsoup4
 # pip install urllib3
 # pip install telebot
 # sudo pip install lxml
+# sudo pip install telebot --upgrade
+# sudo pip install telepot
 # sudo pip install telepot --upgrade
 # sudo apt-get install libxml2 libxml2-dev
 # sudo apt-get install python-lxml
@@ -33,100 +35,105 @@
 # easy_install -U setuptools
 ##########################################################################
 
-from argparse import ArgumentParser
 import re
-import urllib3
-urllib3.disable_warnings()
-import sys  
+import sys as sys
+import urllib as urllib
 
-reload(sys)  
-sys.setdefaultencoding('utf-8')
+import telepot
+
+# import urllib3 as urllib3
 
 # https://www.crummy.com/software/BeautifulSoup/bs3/documentation.html
 try:
-    from bs4 import BeautifulSoup # To get everything
+    from bs4 import BeautifulSoup  # To get everything
 except ImportError:
-	from BeautifulSoup import BeautifulSoup          # For processing HTML
-	#from BeautifulSoup import BeautifulStoneSoup     # For processing XML
-	#import BeautifulSoup                             # To get everything
+    from BeautifulSoup import BeautifulSoup  # For processing HTML
+# from BeautifulSoup import BeautifulStoneSoup     # For processing XML
+# import BeautifulSoup                             # To get everything
 
+
+reload(sys)
+sys.setdefaultencoding('utf-8')
+# urllib3.disable_warnings()
 
 # guarantee unicode string
 _u = lambda t: t.decode('latin-1', 'replace').decode('utf-8', 'replace') if isinstance(t, str) else t
-_uu = lambda *tt: tuple(_u(t) for t in tt) 
+_uu = lambda *tt: tuple(_u(t) for t in tt)
 # guarantee byte string in UTF8 encoding
 _u8 = lambda t: t.encode('UTF-8', 'replace') if isinstance(t, unicode) else t
 _uu8 = lambda *tt: tuple(_u8(t) for t in tt)
 
 
-
-
 def fix_unicode_list(data):
-	datareturn=[]
-	for i in xrange(0, len(data)):
-		datareturn.append(_u(data[i]))
-	return datareturn
+    datareturn = []
+    for i in xrange(0, len(data)):
+        datareturn.append(_u(data[i]))
+    return datareturn
 
 
 def extrair_dados_site(url):
+    html = urllib.urlopen(url).read()
+    soup = BeautifulSoup(html, "lxml")
 
-	html = urllib.urlopen(url).read()
-	soup = BeautifulSoup(html, "lxml")
+    cidadedia = []
+    cidademm = []
 
+    for box in soup.findAll('p', {'class': 'left nornal font14 master'}):
+        txt = box.text
+        cidadedia.append(txt)
 
-	cidadedia=[]
-	cidademm=[]
+    cidadedia = fix_unicode_list(cidadedia)
 
-	for box in soup.findAll('p', {'class':'left nornal font14 master'}):
-		txt=box.text
-		cidadedia.append(txt)
+    for box in soup.findAll('div', {'class': 'left top20'}):
+        txt = box.text
+        txt = re.findall('(\d+mm)', txt)
+        txt = re.findall('(\d+)', str(txt))
+        cidademm.append(txt)
 
-	cidadedia=fix_unicode_list(cidadedia)
+    cidademm = [map(int, x) for x in cidademm]
 
-	#for i in xrange(0, len(cidadedia)):
-	#	print cidadedia[i]
+    total = 0
 
-
-	for box in soup.findAll('div', {'class':'left top20'}):
-		txt=box.text
-		txt=re.findall('(\d+mm)',txt)
-		txt=re.findall('(\d+)',str(txt))
-		cidademm.append(txt)
-
-
-	cidademm=[map(int, x) for x in cidademm]
-
-	total=0
-
-	for i in xrange(0, len(cidademm)-1):
-		#print cidademm[i]
-		total= sum(cidademm[i],total)
-	#print total
-	return([cidadedia[0], cidadedia[9],total])
-
-#SCLA
-cidade1=extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/1093/nanuque-mg')
-cidade2=extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/156/malacacheta-mg')
-cidade3=extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/3848/maravilhas-mg')
-cidade4=extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/211/aguasformosas-mg')
-cidade5=extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/3692/crisolita-mg')
-
-#QQX
-cidade6=extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/2182/ipuacu-sc')
-cidade7=extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/3412/abelardoluz-sc')
-
-#JAU
-cidade8=extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/5474/indiavai-mt')
-cidade9=extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/1174/jauru-mt')
-cidade10=extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/5472/figueiropolisdoeste-mt')
+    for i in xrange(0, len(cidademm) - 1):
+        # print cidademm[i]
+        total = sum(cidademm[i], total)
+    # print total
+    return ([cidadedia[0], cidadedia[9], total])
 
 
+# SCLA
+varScla = []
+varScla.append(extrair_dados_site("http://www.climatempo.com.br/previsao-do-tempo/cidade/1093/nanuque-mg"))
+varScla.append(extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/156/malacacheta-mg'))
+varScla.append(extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/3848/maravilhas-mg'))
+varScla.append(extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/211/aguasformosas-mg'))
+varScla.append(extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/3692/crisolita-mg'))
 
-VARBRIOMUCURI= "Previsão do tempo para a Bacia do Rio Mucuri \nCidades: Malacacheta, Maravilhas, Águas Formosas, Crisolita, Nanuque\nEntre os dias: %s a %s\nTotal de Chuva.: %smm" %(cidade1[0], cidade2[1],cidade1[2]+cidade2[2]+cidade3[2]+cidade4[2]+cidade5[2])
-VARBDOCHAPECO= "Previsão do tempo para a Bacia do Chapecó \nCidades: Ipuaçú, Abelardo Luz \nEntre os dias: %s a %s\nTotal de Chuva.: %smm" %(cidade6[0], cidade6[1],cidade6[2]+cidade7[2])
-VARBVALEJAURU= "Previsão do tempo para a Bacia do Vale do Jauru \nCidades: Jauru, Indiavaí, Fgueirópolis D'oeste\nEntre os dias: %s a %s\nTotal de Chuva.: %smm" %(cidade8[0], cidade8[1],cidade8[2]+cidade9[2]+cidade10[2])
+# QQX
+varQqx = []
+varQqx.append(extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/2182/ipuacu-sc'))
+varQqx.append(extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/3412/abelardoluz-sc'))
 
+# JAU
+varUjau = []
+varUjau.append(extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/5474/indiavai-mt'))
+varUjau.append(extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/1174/jauru-mt'))
+varUjau.append(extrair_dados_site('http://www.climatempo.com.br/previsao-do-tempo/cidade/5472/figueiropolisdoeste-mt'))
 
+varTelegramRioMucuri = "Previsão do tempo para a Bacia do Rio Mucuri \nCidades: Malacacheta, Maravilhas, Águas Formosas, " \
+                       "Crisolita, Nanuque\nEntre os dias: %s a %s\nTotal de Chuva.: %smm" % (
+                           (varScla[0])[0], (varScla[0])[1],
+                           (varScla[0])[2] + (varScla[1])[2] + (varScla[2])[2] + (varScla[3])[2] + (varScla[4])[2])
+varTelegramBaciaChapeco = "Previsão do tempo para a Bacia do Chapecó \nCidades: Ipuaçú, Abelardo Luz \nEntre os dias: %s " \
+                          "a %s\nTotal de Chuva.: %smm" % (
+                              (varQqx[0])[0], (varQqx[0])[1], (varQqx[0])[2] + (varQqx[1])[2])
+varTelegramBaciaJauru = "Previsão do tempo para a Bacia do Vale do Jauru \nCidades: Jauru, Indiavaí, Fgueirópolis D'oeste\n" \
+                        "Entre os dias: %s a %s\nTotal de Chuva.: %smm" % (
+                            (varUjau[0])[0], (varUjau[0])[1], (varUjau[0])[2] + (varUjau[1])[2] + (varUjau[2])[2])
+
+# print (varTelegramBaciaChapeco)
+# print (varTelegramBaciaJauru)
+# print (varTelegramRioMucuri)
 
 ###################################
 # TELEGRAM 
@@ -134,22 +141,20 @@ VARBVALEJAURU= "Previsão do tempo para a Bacia do Vale do Jauru \nCidades: Jaur
 # http://www.howtobuildsoftware.com/index.php/how-do/bTnv/python-telegram-sending-photo-from-url-with-telegram-bot
 # https://github.com/nickoala/telepot
 ###################################
-import telepot
-
 
 ##################################
-# Modificar as variaveis chat_id e token_id verificar o howto http://github.com/diegosmaia/prev-tempo-climatempo/Criando Bot no Telegram.pdf
+# Modificar as variaveis chat_id e token_id verificar o howto
+# http://github.com/diegosmaia/prev-tempo-climatempo/Criando Bot no Telegram.pdf
 ##################################
-chat_id='-57169325'
-token_id='161080402:AAGah3HIxM9jUr0NX1WmEKX3cJCv9PyWD58'
+chat_id = '-57169325'
+token_id = '161080402:AAGah3HIxM9jUr0NX1WmEKX3cJCv9PyWD58'
 
 ##################################
 
 bot = telepot.Bot(token_id)
 f = open('qge.png', 'rb')
 bot.sendPhoto(chat_id, f)
-bot.sendMessage(chat_id,VARBRIOMUCURI)
-bot.sendMessage(chat_id,VARBVALEJAURU)
-bot.sendMessage(chat_id,VARBDOCHAPECO)
 f.close
-
+bot.sendMessage(chat_id, varTelegramRioMucuri)
+bot.sendMessage(chat_id, varTelegramBaciaChapeco)
+bot.sendMessage(chat_id, varUjau)
