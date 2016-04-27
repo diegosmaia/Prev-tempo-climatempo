@@ -33,18 +33,21 @@ class Climatempo(object):
     def __init__(self):
 
         self.__dbMysqlconnect = None
-        self.__dadosextraidos = {}
-        self.__cidadenome = None
+        self.__dados_prev_semana = {}
+        self.__dados_prev_dia = {}
         self.__dbMysqlconnect_error = None
 
-    def extrairdados(self,site_url,cidadenome):
-        self.__cidadenome=cidadenome
+    def extrairdados(self,site_url):
         today = datetime.now()
         html = urllib.urlopen(site_url).read()
         soup = BeautifulSoup(html, "lxml")
 
         extractday = []
         extractmm = []
+
+        ##############################################################
+        # Extrair dados do site da previsão da semana
+        ##############################################################
 
         for box in soup.findAll('p', {'class': 'left nornal font14 master'}):
             txt = box.text
@@ -70,10 +73,40 @@ class Climatempo(object):
         for i in xrange(0, len(extractmm)):
             total = sum(extractmm[i], total)
 
-        self.__dadosextraidos = {"datainicio":extractday[0], "datafinal": extractday[9], "totalmm_semana":total, "totalmm_dia": extractmm[0][0]}
+        self.__dados_prev_semana = {"datainicio":extractday[0], "datafinal": extractday[9], "totalmm_semana":total}
 
-    def getdadosextraidos(self):
-        return self.__dadosextraidos
+        ##############################################################
+        # Extrair dados do site da previsão do dia
+        ##############################################################
+
+        txt = None
+        extractday = []
+        extractmm = []
+
+        for box in soup.findAll("div", {"class": "left small-12 marcador" }):
+            txt = box.text
+            txt = re.findall("PREVIS.O - \d+\/\d\d", txt)
+            if len(txt) != 0:
+                extractday.append(txt)
+
+        extractday=(re.findall("\d+\/\d+", smart_str(extractday[0])))
+        extractday =extractday[0] + "/" + str(today.year)
+
+        for box in soup.findAll("div", {"class": "columns small-12 medium-6 top10"}):
+            txt = box.text
+            txt = re.findall('(\d+mm)', txt)
+            extractmm.append(txt)
+
+        cidadenome = smart_str(soup.html.head.title)
+        cidadenome= (re.findall("(?:Climatempo - Previsão do tempo para )(.*)(?:</title>)",(cidadenome)))[0]
+        self.__dados_prev_dia = {"data": extractday,"totalmm_dia": extractmm[0][0],"cidadenome":cidadenome}
+
+
+    def get_previsao_semana(self):
+        return self.__dados_prev_semana
+
+    def get_previsao_dia(self):
+        return self.__dados_prev_dia
 
     def __MySQLconnect(self,servidor,bancodedados,user,password):
 
@@ -116,10 +149,10 @@ class Climatempo(object):
             # 2 - cidade      varchar(40)
             # 3 - previsao    int(4)
 
-            vardbclimatempo_data = (datetime.strptime(self.__dadosextraidos['datainicio'], "%d/%m/%Y")).strftime("%Y/%m/%d")
+            vardbclimatempo_data = (datetime.strptime(self.__dados_prev_dia['data'], "%d/%m/%Y")).strftime("%Y/%m/%d")
 
             sql = "INSERT INTO climatempo(dataprev,cidade,previsao) VALUES('%s','%s','%f')" \
-                   % (vardbclimatempo_data, self.__cidadenome, self.__dadosextraidos['totalmm_dia'])
+                   % (vardbclimatempo_data, self.__dados_prev_dia['cidadenome'], self.__dados_prev_dia['totalmm_dia'])
             cur.execute(sql)
             self.__dbMysqlconnect.commit()
             self.__MySQLdisconnect()
